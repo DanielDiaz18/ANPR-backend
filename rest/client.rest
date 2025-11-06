@@ -1,0 +1,36 @@
+@host=http://localhost:8000/api/v1/client
+
+# @name GetClient
+GET {{host}}/
+###
+
+# @name CreateClient
+POST {{host}}/
+
+{
+    "name": "John Doe",
+    "phone": "123-456-7890",
+    "email": "john.doe@example.com"
+}
+###
+
+@clientId={{CreateClient.response.body.client.id}}
+
+# @name GetClient
+GET {{host}}/{{clientId}}
+###
+
+# @name UpdateClient
+PUT {{host}}/{{clientId}}
+
+{
+    "kind": "engine_wash"
+}
+###
+
+
+# @name DeleteClient
+DELETE {{host}}/{{clientId}}
+
+###
+

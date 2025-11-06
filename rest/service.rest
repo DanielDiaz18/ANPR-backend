@@ -1,0 +1,35 @@
+@host=http://localhost:8000/api/v1/service
+
+# @name GetServices
+GET {{host}}/
+###
+
+# @name CreateService
+POST {{host}}/
+
+{
+    "kind": "engine_wash",
+    "plate_id": "ABC123"
+}
+###
+
+@serviceId={{CreateService.response.body.service.id}}
+
+# @name GetService
+GET {{host}}/{{serviceId}}
+###
+
+# @name UpdateService
+PUT {{host}}/{{serviceId}}
+
+{
+    "kind": "engine_wash"
+}
+###
+
+
+# @name DeleteService
+DELETE {{host}}/{{serviceId}}
+
+###
+

@@ -1,0 +1,34 @@
+@host=http://localhost:8000/api/v1/vehicle
+
+# @name GetVehicles
+GET {{host}}/
+###
+
+# @name CreateVehicle
+POST {{host}}/
+
+{
+    "plate_id": "ABC123"
+}
+###
+
+@vehicleId={{CreateVehicle.response.body.vehicle.id}}
+
+# @name GetVehicle
+GET {{host}}/{{vehicleId}}
+###
+
+# @name UpdateVehicle
+PUT {{host}}/{{vehicleId}}
+
+{
+    "kind": "engine_wash"
+}
+###
+
+
+# @name DeleteVehicle
+DELETE {{host}}/{{vehicleId}}
+
+###
+
