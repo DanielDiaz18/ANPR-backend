@@ -1,17 +1,19 @@
-from fastapi import APIRouter, Depends
+from typing import Optional
+from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy import delete, or_, update
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.client import Client
 from app.schemas.client import ClientCreate, ClientUpdate
 from app.schemas.user import User
+from app.core.websocket import manager
 
 router = APIRouter()
 
 
 @router.get("/")
 def get_clients(
-    q: str | None = None,
+    q: Optional[str] = None,
     limit: int = 10,
     db: Session = Depends(get_db),
 ):
@@ -35,7 +37,7 @@ def get_client(client_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/")
-def create_client(body: ClientCreate, db: Session = Depends(get_db)):
+def create_client(body: ClientCreate, background_tasks: BackgroundTasks,  db: Session = Depends(get_db)):
     client = Client(
         name=body.name,
         email=body.email,
@@ -44,11 +46,18 @@ def create_client(body: ClientCreate, db: Session = Depends(get_db)):
     db.add(client)
     db.commit()
     db.refresh(client)
+
+    background_tasks.add_task(
+        manager.broadcast_service_update,
+        action="create",
+        service_data=client.to_dict()
+    )
+
     return {"message": "client created", "client": client}
 
 
 @router.put("/{client_id}")
-def update_client(client_id: int, body: ClientUpdate, db: Session = Depends(get_db)):
+def update_client(client_id: int, body: ClientUpdate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     update_stmt = (
         update(Client)
         .where(Client.id == client_id)
@@ -57,11 +66,22 @@ def update_client(client_id: int, body: ClientUpdate, db: Session = Depends(get_
     db.execute(update_stmt)
     db.commit()
     client = db.query(Client).filter(Client.id == client_id).first()
+    background_tasks.add_task(
+        manager.broadcast_client_update,
+        action="update",
+        service_data=client.to_dict()
+    )
+
     return {"message": "client updated", "client": client}
 
 
 @router.delete("/{client_id}")
-def delete_client(client_id: int, db: Session = Depends(get_db)):
+def delete_client(client_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     db.execute(delete(Client).where(Client.id == client_id))
     db.commit()
+    background_tasks.add_task(
+        manager.broadcast_client_update,
+        action="delete",
+        service_data={"id": client_id}
+    )
     return {"client_id": client_id, "message": "client deleted"}

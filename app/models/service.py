@@ -1,9 +1,7 @@
+from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy import (
     Column,
     Integer,
-    String,
-    Text,
-    Boolean,
     DateTime,
     ForeignKey,
     Enum,
@@ -16,8 +14,10 @@ import enum
 from app.schemas.service import ServiceKind
 
 
-class Service(Base):
+class Service(Base):  # , SerializerMixin):
     __tablename__ = "services"
+
+    serialize_rules = ("-vehicle.services",)
 
     id = Column(Integer, primary_key=True, index=True)
     vehicle_id = Column(Integer, ForeignKey("vehicles.id"))

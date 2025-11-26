@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Service Updates Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .message {
+            padding: 8px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+            background-color: white;
+        }
+        .message.create {
+            border-left-color: #28a745;
+        }
+        .message.update {
+            border-left-color: #ffc107;
+        }
+        .message.delete {
+            border-left-color: #dc3545;
+        }
+        .message-time {
+            color: #666;
+            font-size: 0.85em;
+        }
+        .message-type {
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔄 WebSocket Service Updates Test Client</h1>
+    
+    <div class="container">
+        <h2>Connection</h2>
+        <div>
+            <label>WebSocket URL:</label>
+            <input type="text" id="wsUrl" value="ws://localhost:8000/api/v1/ws/services" />
+        </div>
+        <br>
+        <div id="status" class="status disconnected">Disconnected</div>
+        <button id="connectBtn" onclick="connect()">Connect</button>
+        <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+        <button onclick="clearMessages()">Clear Messages</button>
+    </div>
+
+    <div class="container">
+        <h2>Real-time Updates</h2>
+        <div id="messages"></div>
+    </div>
+
+    <div class="container">
+        <h2>Statistics</h2>
+        <div id="stats">
+            <p>Total messages: <span id="totalMessages">0</span></p>
+            <p>Create events: <span id="createCount">0</span></p>
+            <p>Update events: <span id="updateCount">0</span></p>
+            <p>Delete events: <span id="deleteCount">0</span></p>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let messageCount = 0;
+        let createCount = 0;
+        let updateCount = 0;
+        let deleteCount = 0;
+
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+            ws = new WebSocket(url);
+
+            ws.onopen = function(event) {
+                updateStatus(true);
+                addMessage('System', 'Connected to WebSocket server', 'info');
+            };
+
+            ws.onmessage = function(event) {
+                messageCount++;
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'initial_data') {
+                    addMessage('Initial Data', `Loaded ${data.data.length} services`, 'info');
+                    displayServices(data.data);
+                } else if (data.type === 'service_update') {
+                    const action = data.action;
+                    if (action === 'create') createCount++;
+                    if (action === 'update') updateCount++;
+                    if (action === 'delete') deleteCount++;
+                    
+                    addMessage(
+                        `Service ${action.toUpperCase()}`,
+                        JSON.stringify(data.data, null, 2),
+                        action
+                    );
+                } else {
+                    addMessage('Message', JSON.stringify(data, null, 2), 'info');
+                }
+                
+                updateStats();
+            };
+
+            ws.onerror = function(error) {
+                addMessage('Error', `WebSocket error: ${error}`, 'error');
+            };
+
+            ws.onclose = function(event) {
+                updateStatus(false);
+                addMessage('System', 'Disconnected from WebSocket server', 'info');
+            };
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            
+            if (connected) {
+                statusDiv.textContent = 'Connected';
+                statusDiv.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                statusDiv.textContent = 'Disconnected';
+                statusDiv.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            }
+        }
+
+        function addMessage(title, content, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const time = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `
+                <div class="message-time">${time}</div>
+                <div class="message-type">${title}</div>
+                <pre>${content}</pre>
+            `;
+            
+            messagesDiv.insertBefore(messageDiv, messagesDiv.firstChild);
+        }
+
+        function displayServices(services) {
+            const content = services.map(s => 
+                `ID: ${s.id}, Plate: ${s.plate_id}, Kind: ${s.kind}, Created: ${s.created_at}`
+            ).join('\n');
+            addMessage('Services List', content, 'info');
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+            messageCount = 0;
+            createCount = 0;
+            updateCount = 0;
+            deleteCount = 0;
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('totalMessages').textContent = messageCount;
+            document.getElementById('createCount').textContent = createCount;
+            document.getElementById('updateCount').textContent = updateCount;
+            document.getElementById('deleteCount').textContent = deleteCount;
+        }
+    </script>
+</body>
+</html>

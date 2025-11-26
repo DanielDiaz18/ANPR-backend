@@ -16,7 +16,7 @@ config = context.config
 config.set_main_option(
     "sqlalchemy.url",
     os.getenv("DATABASE_URL")
-    or "postgresql://postgres:password@192.168.1.91:5432/autolavado",
+    or "postgresql://postgres:password@127.0.0.1:5432/autolavado",
 )
 
 # Interpret the config file for Python logging.

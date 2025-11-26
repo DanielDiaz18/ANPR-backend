@@ -1,10 +1,11 @@
+from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
-class Vehicle(Base):
+class Vehicle(Base):  # , SerializerMixin):
     __tablename__ = "vehicles"
 
     id = Column(Integer, primary_key=True, index=True)

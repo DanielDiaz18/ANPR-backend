@@ -24,7 +24,7 @@ GET {{host}}/{{clientId}}
 PUT {{host}}/{{clientId}}
 
 {
-    "kind": "engine_wash"
+    "phone": "1234567890"
 }
 ###
 

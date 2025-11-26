@@ -1,0 +1,32 @@
+@host=http://localhost:8000/api/v1/auth
+
+
+@email=user@mail.com
+@password=12345678
+
+# @name Register 
+POST {{host}}/register 
+Content-Type: application/json
+
+{
+    "email": "{{email}}",
+    "password": "{{password}}",
+    "name": "Test User",
+    "phone_number": "1234567890"
+}
+###
+
+# @name Login
+POST {{host}}/login 
+Content-Type: application/x-www-form-urlencoded
+
+username={{email}}
+&password={{password}}
+### 
+
+@access_token={{Login.response.body.access_token}}
+
+# @name GetCurrentUser
+GET {{host}}/me
+Authorization: Bearer {{access_token}}
+### 
