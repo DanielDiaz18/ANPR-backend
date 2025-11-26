@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard de Estadísticas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-card.clients {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .stat-card.vehicles {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .stat-card.services {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+        .stat-value {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #logs {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+            background-color: #f9f9f9;
+        }
+        .log-entry.create {
+            border-left-color: #28a745;
+            background-color: #f1f9f3;
+        }
+        .log-entry.update {
+            border-left-color: #ffc107;
+            background-color: #fffbf0;
+        }
+        .log-entry.delete {
+            border-left-color: #dc3545;
+            background-color: #fdf4f5;
+        }
+        .log-time {
+            color: #666;
+            font-size: 0.85em;
+        }
+        .log-action {
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .log-entity {
+            color: #007bff;
+            font-weight: 500;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .timestamp {
+            color: #999;
+            font-size: 0.9em;
+            text-align: right;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 Dashboard de Estadísticas</h1>
+    
+    <div class="container">
+        <button onclick="loadStats()">🔄 Actualizar</button>
+        <button onclick="startAutoRefresh()">▶️ Auto-actualizar</button>
+        <button onclick="stopAutoRefresh()">⏸️ Detener</button>
+        <div class="timestamp" id="lastUpdate">Última actualización: --</div>
+    </div>
+
+    <div class="container">
+        <h2>Estadísticas Generales</h2>
+        <div class="stats-grid">
+            <div class="stat-card clients">
+                <div class="stat-label">Total Clientes</div>
+                <div class="stat-value" id="totalClients">-</div>
+            </div>
+            <div class="stat-card vehicles">
+                <div class="stat-label">Total Vehículos</div>
+                <div class="stat-value" id="totalVehicles">-</div>
+            </div>
+            <div class="stat-card services">
+                <div class="stat-label">Servicios Hoy</div>
+                <div class="stat-value" id="servicesToday">-</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Logs Recientes (últimos 50)</h2>
+        <div id="logs">
+            <div class="loading">Cargando logs...</div>
+        </div>
+    </div>
+
+    <script>
+        let autoRefreshInterval = null;
+        const API_URL = 'http://localhost:8000/api/v1/dashboard/stats';
+
+        async function loadStats() {
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                
+                // Update statistics
+                document.getElementById('totalClients').textContent = data.statistics.total_clients;
+                document.getElementById('totalVehicles').textContent = data.statistics.total_vehicles;
+                document.getElementById('servicesToday').textContent = data.statistics.services_today;
+                
+                // Update logs
+                displayLogs(data.recent_logs);
+                
+                // Update timestamp
+                const timestamp = new Date(data.timestamp);
+                document.getElementById('lastUpdate').textContent = 
+                    `Última actualización: ${timestamp.toLocaleString()}`;
+                
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                document.getElementById('logs').innerHTML = 
+                    '<div class="loading" style="color: red;">Error al cargar datos</div>';
+            }
+        }
+
+        function displayLogs(logs) {
+            const logsContainer = document.getElementById('logs');
+            
+            if (logs.length === 0) {
+                logsContainer.innerHTML = '<div class="loading">No hay logs disponibles</div>';
+                return;
+            }
+            
+            logsContainer.innerHTML = logs.map(log => {
+                const time = new Date(log.created_at).toLocaleString();
+                const actionClass = log.action_type ? log.action_type.toLowerCase() : '';
+                const icon = getActionIcon(log.action_type);
+                
+                return `
+                    <div class="log-entry ${actionClass}">
+                        <div>
+                            <span class="log-action">${icon} ${log.action_type || 'N/A'}</span>
+                            <span class="log-entity">${log.entity_type || 'N/A'}</span>
+                            ${log.entity_id ? `#${log.entity_id}` : ''}
+                        </div>
+                        <div>${log.description}</div>
+                        <div class="log-time">${time}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getActionIcon(action) {
+            const icons = {
+                'create': '➕',
+                'update': '✏️',
+                'delete': '🗑️',
+                'read': '👁️',
+                'login': '🔐',
+                'logout': '🚪',
+                'register': '📝'
+            };
+            return icons[action?.toLowerCase()] || '📋';
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) return;
+            autoRefreshInterval = setInterval(loadStats, 5000); // Refresh every 5 seconds
+            alert('Auto-actualización activada (cada 5 segundos)');
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                alert('Auto-actualización detenida');
+            }
+        }
+
+        // Load stats on page load
+        loadStats();
+    </script>
+</body>
+</html>

@@ -8,6 +8,8 @@ from app.core.database import Base
 class Client(Base):  # , SerializerMixin):
     __tablename__ = "clients"
 
+    serialize_rules = ("-vehicle.client",)
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True, nullable=False)
     phone = Column(String, nullable=True)

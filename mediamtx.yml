@@ -13,7 +13,7 @@ webrtcAddress: 0.0.0.0:8889
 # Paths for streams
 paths:
   stream:
-    source: rtsp://192.168.1.137
+    source: rtsp://172.20.10.1
     sourceAnyPortEnable:
       True
       # Replace with your camera's RTSP URL

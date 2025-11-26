@@ -3,8 +3,10 @@ from sqlalchemy import delete, insert, update
 from sqlalchemy.orm import Session, joinedload
 from app.core.database import get_db
 from app.core.websocket import manager
+from app.core.logger import create_log
 from app.models.service import Service
 from app.models.vehicle import Vehicle
+from app.models.activity_log import ActionType, EntityType
 from app.schemas.service import ServiceCreate, ServiceUpdate
 
 router = APIRouter()
@@ -42,6 +44,15 @@ async def create_service(
     service_id = result.inserted_primary_key[0]
     service = db.query(Service).filter(Service.id == service_id).first()
 
+    # Create log
+    create_log(
+        db=db,
+        action=ActionType.CREATE,
+        entity=EntityType.SERVICE,
+        entity_id=service.id,
+        message=f"Service created for vehicle {plate_id}",
+    )
+
     # Broadcast WebSocket update
     background_tasks.add_task(
         manager.broadcast_service_update,
@@ -74,6 +85,15 @@ async def update_service(
     db.commit()
     service = db.query(Service).filter(Service.id == service_id).first()
 
+    # Create log
+    create_log(
+        db=db,
+        action=ActionType.UPDATE,
+        entity=EntityType.SERVICE,
+        entity_id=service.id,
+        message=f"Service {service_id} updated",
+    )
+
     # Broadcast WebSocket update
     background_tasks.add_task(
         manager.broadcast_service_update,
@@ -96,6 +116,15 @@ async def delete_service(
 
     db.execute(delete(Service).where(Service.id == service_id))
     db.commit()
+
+    # Create log
+    create_log(
+        db=db,
+        action=ActionType.DELETE,
+        entity=EntityType.SERVICE,
+        entity_id=service_id,
+        message=f"Service {service_id} deleted",
+    )
 
     # Broadcast WebSocket update
     background_tasks.add_task(

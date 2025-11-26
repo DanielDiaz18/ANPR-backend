@@ -1,10 +1,13 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+from datetime import datetime, timedelta
 from app.core.websocket import manager
 from app.core.database import get_db
 from app.models.client import Client
 from app.models.service import Service
 from app.models.vehicle import Vehicle
+from app.models.activity_log import ActivityLog
 from sqlalchemy.orm import joinedload
 import json
 
@@ -138,4 +141,56 @@ async def websocket_stats():
             "vehicles": manager.get_active_connections_count("vehicles"),
             "all": manager.get_active_connections_count("all"),
         }
+    }
+
+
+@router.get("/dashboard/stats")
+async def get_dashboard_stats(db: Session = Depends(get_db)):
+    """
+    Get dashboard statistics including:
+    - Recent logs
+    - Total clients registered
+    - Total vehicles registered
+    - Number of services registered today
+    """
+    # Get recent logs (últimos 50)
+    recent_logs = (
+        db.query(ActivityLog).order_by(ActivityLog.created_at.desc()).limit(50).all()
+    )
+
+    # Serialize logs
+    logs_data = [
+        {
+            "id": log.id,
+            "action_type": log.action_type.value if log.action_type else None,
+            "entity_type": log.entity_type.value if log.entity_type else None,
+            "entity_id": log.entity_id,
+            "description": log.description,
+            "created_at": log.created_at.isoformat() if log.created_at else None,
+        }
+        for log in recent_logs
+    ]
+
+    # Total clients registered
+    total_clients = db.query(func.count(Client.id)).scalar()
+
+    # Total vehicles registered
+    total_vehicles = db.query(func.count(Vehicle.id)).scalar()
+
+    # Services registered today
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    services_today = (
+        db.query(func.count(Service.id))
+        .filter(Service.created_at >= today_start)
+        .scalar()
+    )
+
+    return {
+        "recent_logs": logs_data,
+        "statistics": {
+            "total_clients": total_clients,
+            "total_vehicles": total_vehicles,
+            "services_today": services_today,
+        },
+        "timestamp": datetime.utcnow().isoformat(),
     }

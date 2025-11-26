@@ -4,6 +4,7 @@ from sqlalchemy import delete, insert, or_, update
 from sqlalchemy.orm import Session
 from app.api.v1.endpoints.auth import get_current_active_user
 from app.core.database import get_db
+from app.core.logger import create_log
 from app.models.activity_log import ActionType, ActivityLog, EntityType
 from app.models.service import Service
 from app.models.vehicle import Vehicle
@@ -54,6 +55,16 @@ def create_vehicle(
     db.add(new_vehicle)
     db.commit()
     db.refresh(new_vehicle)
+
+    # Create log
+    create_log(
+        db=db,
+        action=ActionType.CREATE,
+        entity=EntityType.VEHICLE,
+        entity_id=new_vehicle.id,
+        message=f"Vehicle {new_vehicle.plate_id} created",
+    )
+
     return {"message": "vehicle created", "vehicle": new_vehicle}
 
 
@@ -72,6 +83,16 @@ def update_vehicle(
     db.execute(update_stmt)
     db.commit()
     vehicle = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+
+    # Create log
+    create_log(
+        db=db,
+        action=ActionType.UPDATE,
+        entity=EntityType.VEHICLE,
+        entity_id=vehicle_id,
+        message=f"Vehicle {vehicle_id} updated",
+    )
+
     return {"message": "vehicle updated", "vehicle": vehicle}
 
 
@@ -84,4 +105,14 @@ def delete_vehicle(
     delete_stmt = delete(Vehicle).where(Vehicle.id == vehicle_id)
     db.execute(delete_stmt)
     db.commit()
+
+    # Create log
+    create_log(
+        db=db,
+        action=ActionType.DELETE,
+        entity=EntityType.VEHICLE,
+        entity_id=vehicle_id,
+        message=f"Vehicle {vehicle_id} deleted",
+    )
+
     return {"vehicle_id": vehicle_id, "message": "Vehicle deleted"}

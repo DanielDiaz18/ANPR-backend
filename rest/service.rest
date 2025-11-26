@@ -9,7 +9,7 @@ POST {{host}}/
 
 {
     "kind": "engine_wash",
-    "plate_id": "ABC123"
+    "plate_id": "ABt123"
 }
 ###
 
