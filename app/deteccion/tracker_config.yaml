@@ -1,0 +1,14 @@
+# Configuración del tracker [NO MODIFICAR]
+
+# Tipo de tracker
+tracker_type: bytetrack
+
+track_high_thresh: 0.5     # Confianza mínima para comenzar un nuevo track
+track_low_thresh: 0.1      # Confianza mínima para mantener un track existente
+new_track_thresh: 0.4      # Umbral para crear nuevos tracks
+track_buffer: 200          # Memoria en frames antes de olvidar el objeto
+match_thresh: 0.8          # Coincidencia entre detección y track existente
+frame_rate: 30             # Frame rate del video de entrada
+mot20: False               # Mantengo en false ya que no uso un dataset MOT20
+fuse_score: True           # Combina confianza y similitud al asociar detecciones
+

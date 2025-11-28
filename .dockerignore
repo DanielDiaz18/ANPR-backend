@@ -1,0 +1,7 @@
+venv/
+.venv/
+__pycache__/
+.git/
+*.mp4
+*.avi
+*.vhdx
